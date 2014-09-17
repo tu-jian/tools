@@ -2,7 +2,6 @@ set nocompatible
 set number
 filetype on
 syntax on
-set smartindent
 set tabstop=4
 set hls
 set incsearch
