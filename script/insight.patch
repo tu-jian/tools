@@ -1,0 +1,35 @@
+diff --git a/tk/generic/tk.h b/tk/generic/tk.h
+index 9883b41..1ba095e 100644
+--- a/tk/generic/tk.h
++++ b/tk/generic/tk.h
+@@ -650,11 +650,11 @@ typedef struct Tk_GeomMgr {
+  *
+  *---------------------------------------------------------------------------
+  */
+-#define VirtualEvent	    (LASTEvent)
+-#define ActivateNotify	    (LASTEvent + 1)
+-#define DeactivateNotify    (LASTEvent + 2)
+-#define MouseWheelEvent     (LASTEvent + 3)
+-#define TK_LASTEVENT	    (LASTEvent + 4)
++#define VirtualEvent	 (MappingNotify)
++#define ActivateNotify	 (MappingNotify + 1)
++#define DeactivateNotify (MappingNotify + 2)
++#define MouseWheelEvent (MappingNotify + 3)
++#define TK_LASTEVENT	 (MappingNotify + 4)
+ 
+ #define MouseWheelMask	    (1L << 28)
+ 
+diff --git a/tk/generic/tkBind.c b/tk/generic/tkBind.c
+index 12dbe33..cf7d731 100644
+--- a/tk/generic/tkBind.c
++++ b/tk/generic/tkBind.c
+@@ -584,6 +584,9 @@ static int flagArray[TK_LASTEVENT] = {
+    /* SelectionNotify */	0,
+    /* ColormapNotify */		COLORMAP,
+    /* ClientMessage */		0,
++#ifdef	GenericEvent
++   /* GenericEvent */	 0,
++#endif
+    /* MappingNotify */		0,
+    /* VirtualEvent */		VIRTUAL,
+    /* Activate */		ACTIVATE,	    
