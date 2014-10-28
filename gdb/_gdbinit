@@ -1,4 +1,5 @@
 set print pretty on
+set print element 0
 set pagination off
 
 define dump_stack
@@ -7,7 +8,7 @@ end
 
 document dump_stack
 dump_stack thread_info_addr
-	Dump specified pid task stack info
+	Dump specified task stack info
 end
 
 define dump_tasks
@@ -25,13 +26,13 @@ define dump_tasks
 
 		if ($argc == 1)
 			if ($arg0 == $task->pid)
-			printf  "%d\t%p\t%p\t0x%x:0x%x\t%s\n", $task->pid, $task, $task->stack, \
+			printf  "%06d\t%p\t%p\t0x%08x:0x%04x\t%s\n", $task->pid, $task, $task->stack, \
 					((struct thread_info*)($task->stack))->cpu_context.sp,\
 					(unsigned int)($task->stack) + 8192 - ((struct thread_info*)($task->stack))->cpu_context.sp,\
 					$task->comm
 			end
 		else
-			printf  "%d\t%p\t%p\t0x%x:0x%04x\t%s\n", $task->pid, $task, $task->stack, \
+			printf  "%06d\t%p\t%p\t0x%08x:0x%04x\t%s\n", $task->pid, $task, $task->stack, \
 					((struct thread_info*)($task->stack))->cpu_context.sp,\
 					(unsigned int)($task->stack) + 8192 - ((struct thread_info*)($task->stack))->cpu_context.sp,\
 					$task->comm
@@ -55,3 +56,29 @@ document dump_tasks
 dump_tasks [task_pid]
 	Dump all or specified pid task info: PID TASK_STRUCT_ADDR THERAD_INFO_ADDR SP:SIZE CMD
 end
+
+
+##################### OPENOCD COMMANDS ##############################
+
+# dispay current cpu core id
+define core-id
+	maint packet jc
+end
+
+# force display of coreid 0
+define core-id0 
+	printf "switch to cpu core id 0\n"
+	maint packet Jc0
+	continue
+	main packet Jc-1
+end
+
+# force display of coreid 1
+define core-id1 
+	printf "switch to cpu core id 1\n"
+	maint packet Jc1
+	continue
+	main packet Jc-1
+end
+
+#####################################################################
