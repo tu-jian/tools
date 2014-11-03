@@ -2,8 +2,30 @@ set print pretty on
 set print element 0
 set pagination off
 
-define dump_stack
+define dump_list
+	if $argc != 1
+		help dump_list
+	else
+		set $list_head = $arg0
+	end
 	
+	set $total_list_nodes = 0
+	set $node = $list_head
+
+	printf "num\tnode\t\tprev\t\tnext\n"
+
+	while (({struct list_head}$node).next != $list_head)
+		set $total_list_nodes++
+		printf "%d\t%p\t%p\t%p\n", $total_list_nodes, $node,\
+		({struct list_head}$node).prev, ({struct list_head}$node).next
+
+		set $node = ({struct list_head}$node).next
+	end
+end
+
+document dump_list
+dump_list head_addr
+	Dump link list
 end
 
 document dump_stack
