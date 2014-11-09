@@ -1,30 +1,47 @@
 set print pretty on
 set print element 0
 set pagination off
+#set prompt \033[31mgdb$ \033[0m
+
+set $struct_mem_offset = 0
+define get_struct_offset
+	printf "Example: how to get struct's member 'tasks' offset form 'task_struct'.\n"
+	printf "run gdb command:\n"
+	printf "	print &(({struct task_struct}0x0).tasks)\n\n"
+#	printf "	set $g_struct_mem_offset = $\n\n"
+end
 
 define dump_list
-	if $argc != 1
+	if $argc != 2
 		help dump_list
 	else
-		set $list_head = $arg0
-	end
+		set $offset = $arg1
+		set $list_head = $arg0 + $offset
 	
-	set $total_list_nodes = 0
+	set $total_list_nodes = 1
 	set $node = $list_head
 
-	printf "num\tnode\t\tprev\t\tnext\n"
+	printf "num\tnode\t\tstruct addr\n"
+	printf  "------------------------------------------------------------------------------\n"
+	while (1)
+# TODO
+#		printf "%d\t%p\t%p\t%p\n", $total_list_nodes, $node, ({struct list_head}$node).prev, ({struct list_head}$node).next
+		printf "%d\t%p\t0x%08x\n", $total_list_nodes, $node, (unsigned int)$node - $offset
 
-	while (({struct list_head}$node).next != $list_head)
 		set $total_list_nodes++
-		printf "%d\t%p\t%p\t%p\n", $total_list_nodes, $node,\
-		({struct list_head}$node).prev, ({struct list_head}$node).next
 
 		set $node = ({struct list_head}$node).next
+		if ($node->next == ({struct list_head}$list_head).next)
+			loop_break
+		end
+	end
+	printf  "------------------------------------------------------------------------------\n"
+
 	end
 end
 
 document dump_list
-dump_list head_addr
+dump_list struct_addr mem_offset
 	Dump link list
 end
 
@@ -74,16 +91,190 @@ dump_tasks [task_pid]
 	Dump all or specified pid task info: PID TASK_STRUCT_ADDR THERAD_INFO_ADDR SP:SIZE CMD
 end
 
+################################### ARM COMMANDS ##########################################
+define arm_irq_enable
+    if (($cpsr >> 7) & 1)
+        printf "old state: I=1(irq disabled)\n"
+    else
+        printf "old state: I=0(irq enabled)\n"
+    end
+	printf "enable irq ...\n\n"
+	set $cpsr = $cpsr & ~(1 << 7)
+end
 
-##################### OPENOCD COMMANDS ##############################
+define arm_irq_disable
+    if (($cpsr >> 7) & 1)
+        printf "old state: I=1(irq disabled)\n"
+    else
+        printf "old state: I=0(irq enabled)\n"
+    end
+	printf "disable irq ...\n\n"
+	set $cpsr = $cpsr | (1 << 7)
+end
+
+define arm_fiq_enable
+    if (($cpsr >> 6) & 1)
+        printf "old state: F=1(fiq disabled)\n"
+    else
+        printf "old state: F=0(fiq enabled)\n"
+    end
+	printf "enable fiq ...\n\n"
+	set $cpsr = $cpsr & ~(1 << 6)
+end
+
+define arm_fiq_disable
+    if (($cpsr >> 6) & 1)
+        printf "old state: F=1(fiq disabled)\n"
+    else
+        printf "old state: F=0(fiq enabled)\n"
+    end
+	printf "disable fiq ...\n\n"
+	set $cpsr = $cpsr | (1 << 6)
+end
+
+define arm_status
+	printf "cpsr: 0x%x\n", $cpsr
+# conditional flags are
+# negative/less than (N), bit 31 of CPSR
+# zero (Z), bit 30
+# Carry/Borrow/Extend (C), bit 29
+# Overflow (V), bit 28
+    # negative/less than (N), bit 31 of CPSR
+    if (($cpsr >> 0x1f) & 1)
+        printf "N "
+	    set $_n_flag = 1
+    else
+        printf "n "
+	    set $_n_flag = 0
+    end
+    # zero (Z), bit 30
+    if (($cpsr >> 0x1e) & 1)
+        printf "Z "
+	    set $_z_flag = 1
+    else
+        printf "z "
+	    set $_z_flag = 0
+    end
+    # Carry/Borrow/Extend (C), bit 29
+    if (($cpsr >> 0x1d) & 1)
+        printf "C "
+    	set $_c_flag = 1
+    else
+        printf "c "
+	    set $_c_flag = 0
+    end
+    # Overflow (V), bit 28
+    if (($cpsr >> 0x1c) & 1)
+        printf "V "
+        set $_v_flag = 1
+    else
+        printf "v "
+        set $_v_flag = 0
+    end
+    # Sticky overflow (Q), bit 27    
+    if (($cpsr >> 0x1b) & 1)
+        printf "Q "
+        set $_q_flag = 1
+    else
+        printf "q "
+        set $_q_flag = 0
+    end
+    # Java state bit (J), bit 24
+    # When T=1:
+    # J = 0 The processor is in Thumb state.
+    # J = 1 The processor is in ThumbEE state.
+    if (($cpsr >> 0x18) & 1)
+        printf "J "
+        set $_j_flag = 1
+    else
+        printf "j "
+        set $_j_flag = 0
+    end
+    # Data endianness bit (E), bit 9
+    if (($cpsr >> 9) & 1)
+        printf "E "
+        set $_e_flag = 1
+    else
+        printf "e "
+        set $_e_flag = 0
+    end
+    # Imprecise abort disable bit (A), bit 8
+    # The A bit is set to 1 automatically. It is used to disable imprecise data aborts. 
+    # It might not be writable in the Nonsecure state if the AW bit in the SCR register is reset.
+    if (($cpsr >> 8) & 1)
+        printf "A \n"
+        set $_a_flag = 1
+    else
+        printf "a \n"
+        set $_a_flag = 0
+    end
+    # IRQ disable bit (I), bit 7
+    # When the I bit is set to 1, IRQ interrupts are disabled.
+    if (($cpsr >> 7) & 1)
+        printf "bit7: I=1(irq disabled)\n"
+    else
+        printf "bit7: I=0(irq enabled)\n"
+    end
+    # FIQ disable bit (F), bit 6
+    # When the F bit is set to 1, FIQ interrupts are disabled. 
+    # FIQ can be nonmaskable in the Nonsecure state if the FW bit in SCR register is reset.
+    if (($cpsr >> 6) & 1)
+        printf "bit6: F=1(fiq disabled)\n"
+        set $_f_flag = 1
+    else
+        printf "bit6: F=0(fiq enabled)\n"
+        set $_f_flag = 0
+    end
+    # Thumb state bit (F), bit 5
+    # if 1 then the processor is executing in Thumb state or ThumbEE state depending on the J bit
+    if (($cpsr >> 5) & 1)
+        printf "bit5: T=1(thumb state)\n"
+    else
+        printf "bit5: T=0(arm state)\n"
+    end
+
+	printf "bit4-0: mode=0x%x\n", ($cpsr & 0x1f)
+	printf "\t0x10 User   0x11 FIQ        0x12 IRQ     0x13 Supervisor\n"
+	printf "\t0x17 Abort  0x1b Undefined  0x1f System\n"
+	printf "\tcurrent mode: "
+	if (($cpsr & 0x1f) == 0x10)
+		printf "User"
+	end
+	if (($cpsr & 0x1f) == 0x11)
+		printf "FIQ"
+	end
+	if (($cpsr & 0x1f) == 0x12)
+		printf "IRQ"
+	end
+	if (($cpsr & 0x1f) == 0x13)
+		printf "Supervisor"
+	end
+	if (($cpsr & 0x1f) == 0x17)
+		printf "Abort"
+	end
+	if (($cpsr & 0x1f) == 0x1b)
+		printf "Undefined"
+	end
+	if (($cpsr & 0x1f) == 0x1f)
+		printf "System"
+	end
+	printf "\n\n"
+end
+document arm_status 
+Syntax: arm_status
+| Auxiliary function to set ARM cpu flags.
+end
+################################### ARM COMMANDS END ######################################
+
+################################### OPENOCD COMMANDS ######################################
 
 # dispay current cpu core id
-define core-id
+define openocd_core_id
 	maint packet jc
 end
 
 # force display of coreid 0
-define core-id0 
+define openocd_core_id0 
 	printf "switch to cpu core id 0\n"
 	maint packet Jc0
 	continue
@@ -91,11 +282,11 @@ define core-id0
 end
 
 # force display of coreid 1
-define core-id1 
+define openocd_core_id1 
 	printf "switch to cpu core id 1\n"
 	maint packet Jc1
 	continue
 	main packet Jc-1
 end
 
-#####################################################################
+################################### OPENOCD COMMANDS END ##################################
