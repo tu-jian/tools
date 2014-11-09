@@ -28,11 +28,6 @@ dump_list head_addr
 	Dump link list
 end
 
-document dump_stack
-dump_stack thread_info_addr
-	Dump specified task stack info
-end
-
 define dump_tasks
 	set $total_tasks = 0
 	set $offset = (void*)&init_task.tasks - (void*)&init_task
@@ -40,24 +35,24 @@ define dump_tasks
 
 	set $node = init_task.tasks.prev
 
-	printf  "PID\ttask_struct\tthead_info\tsp:size\t\t\tcmd\n"
-	printf  "--------------------------------------------------------------------\n"
+	printf  "PID\ttask_struct\tthead_info\tsp:size\t\t\tstate\tcmd\n"
+	printf  "------------------------------------------------------------------------------\n"
 
 	while (1)
 		set $task = (struct task_struct*)((void*)$node->next - $offset)
 
 		if ($argc == 1)
 			if ($arg0 == $task->pid)
-			printf  "%06d\t%p\t%p\t0x%08x:0x%04x\t%s\n", $task->pid, $task, $task->stack, \
+			printf  "%06d\t%p\t%p\t0x%08x:0x%04x\t%d\t%s\n", $task->pid, $task, $task->stack, \
 					((struct thread_info*)($task->stack))->cpu_context.sp,\
 					(unsigned int)($task->stack) + 8192 - ((struct thread_info*)($task->stack))->cpu_context.sp,\
-					$task->comm
+					$task->state, $task->comm
 			end
 		else
-			printf  "%06d\t%p\t%p\t0x%08x:0x%04x\t%s\n", $task->pid, $task, $task->stack, \
+			printf  "%06d\t%p\t%p\t0x%08x:0x%04x\t%d\t%s\n", $task->pid, $task, $task->stack, \
 					((struct thread_info*)($task->stack))->cpu_context.sp,\
 					(unsigned int)($task->stack) + 8192 - ((struct thread_info*)($task->stack))->cpu_context.sp,\
-					$task->comm
+					$task->state, $task->comm
 		end
 
 		set $total_tasks++
@@ -71,7 +66,7 @@ define dump_tasks
 	printf  "total tasks: %d\n", $total_tasks
 	printf  "current task pid: %d\n", ((struct thread_info*)((unsigned int)$sp & ~(8192 - 1)))->task->pid
 	printf  "sp top: thread_info_addr + 0x2000(8192)\n"
-	printf  "--------------------------------------------------------------------\n"
+	printf  "------------------------------------------------------------------------------\n"
 end
 
 document dump_tasks
