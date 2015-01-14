@@ -6,7 +6,7 @@
 # It includes gerenic applications, libs and services.
 
 #config options
-CONFIG_USERNAME=tujian
+CONFIG_USERNAME=$USER
 
 . ./function_libs.sh
 
