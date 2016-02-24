@@ -1,16 +1,29 @@
 #!/bin/bash
 
-debug ()
-{
-#	echo "$1"
-	return 0;
-}
-
 COLOR_RED=`echo -e "\033[0;31m"`
 COLOR_GREEN=`echo -e "\033[0;32m"`
 COLOR_YELLOW=`echo -e "\033[0;33m"`
 COLOR_BLUE=`echo -e "\033[0;34m"`
 COLOR_CLEAR=`echo -e "\033[0m"`
+
+# debug is off
+debug_switch=0
+
+case $1 in
+-d|--debug)
+	debug_switch=1
+	shift
+;;
+esac
+
+debug ()
+{
+	if [ ${debug_switch} -eq 1 ] ; then
+		echo "$1"
+	fi
+
+	return 0;
+}
 
 debug `which $0`
 debug `dirname $0`
@@ -35,12 +48,12 @@ exec_original_cmd="${cmd_name} ${cmd_args}"
 if test -x "${color_shell_script_dir}/cmd_${cmd_name}_config.sh" ; then
 	cmd_config="${color_shell_script_dir}/cmd_${cmd_name}_config.sh"
 else
-	echo "Config file: cmd_${cmd_name}_config.sh is not exist."
-	echo "Using default config file: cmd_default_config.sh."
+	debug "Config file: cmd_${cmd_name}_config.sh is not exist."
+	debug "Using default config file: cmd_default_config.sh."
 	cmd_config="${color_shell_script_dir}/cmd_default_config.sh"
 
 	if [ ! -x ${cmd_config} ] ; then
-		echo "Error: file ${cmd_config} is not exist."
+		debug "Error: file ${cmd_config} is not exist."
 		exit 1
 	fi
 fi
@@ -75,7 +88,7 @@ fi
 
 array_size_keyword_color_pair=${#keyword_color_pair[*]}
 if [ ${array_size_keyword_color_pair} -eq 0 -o $((array_size_keyword_color_pair%2)) -ne 0 ]; then
-	echo "Config file error. array keyword_color_pair[] is null or not pair.."
+	debug "Config file error. array keyword_color_pair[] is null or not pair."
 	exit 1
 fi
 
@@ -97,7 +110,7 @@ convert_color ()
 	color=${COLOR_BLUE}
 	;;
 	*)
-	echo "Unsupported color option: ${c}."
+	debug "Unsupported color option: ${c}."
 	exit 1
 	;;
 	esac
@@ -121,4 +134,7 @@ do
 done
 
 debug "sed_str: ${sed_str}"
+debug "****************************************************************************************"
+debug ""
+
 ${exec_original_cmd} 2>&1 | eval sed ${sed_str}
