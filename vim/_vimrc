@@ -1,0 +1,15 @@
+set hls				"high light
+set incsearch
+"set tabstop=8
+syntax on
+filetype on
+set nocompatible
+set number			"line number
+
+set mouse=n
+
+highlight end_of_space term=bold cterm=bold ctermbg=Red
+match end_of_space / \+$/
+
+set cursorline
+"set cursorcolumn
